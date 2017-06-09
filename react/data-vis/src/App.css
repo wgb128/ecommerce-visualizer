@@ -1,0 +1,36 @@
+.App {
+  text-align: center;
+}
+
+.Product {
+  width: 800px;
+  margin: 0 auto;
+  border-style: solid;
+  border-color: #888;
+  border-width: 3px;
+  border-radius: 20px;
+}
+
+.PieChart {
+    display: flex;
+    width: 500px;
+    margin: 0 auto;
+}
+
+.pie {
+  width: 300px;
+}
+
+.circle {
+  display: inline-block;
+  border-radius: 50%;
+  width: 10px;
+  height: 10px;
+}
+
+.legend {
+  flex: 1;
+  text-align: left;
+  margin-top: 40px;
+  margin-left: 40px;
+}
