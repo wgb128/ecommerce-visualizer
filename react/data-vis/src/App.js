@@ -80,7 +80,8 @@ class Product extends Component {
   }
   render() {
     function priceFormat(num) {
-      return '$' + num.toFixed(2).toString();
+      if(num) return '$' + num.toFixed(2).toString();
+      else return 'Unknown';
     }
     return (
       <div className="Product">
