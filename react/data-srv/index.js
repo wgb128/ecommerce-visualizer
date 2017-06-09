@@ -23,7 +23,7 @@ app.listen(3001, function() {
 app.get('/', (req, res) => {
     var category = req.query.category;
     var mongo_url = 'mongodb://localhost:27017/';
-    var collection_name = '1496977049705';
+    var collection_name = 'commerce';
     MongoClient.connect(mongo_url, function(err, db) {
         if(err) console.error(err);
         else {

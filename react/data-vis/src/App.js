@@ -4,6 +4,8 @@ import './App.css';
 import { Tab, Tabs, TabList, TabPanel } from 'react-tabs';
 import 'react-tabs/style/react-tabs.css';
 import PieChart from 'react-svg-piechart';
+import ReactTable from 'react-table';
+import 'react-table/react-table.css';
 
 import 'react-select/dist/react-select.css';
 var Select = require('react-select');
@@ -25,7 +27,8 @@ class Product extends Component {
         quartile2: 0,
         quartile3: 0,
         whiskerHigh: 0
-      }
+      },
+      brandavgs: []
     };
   }
   dbLoad = (category) => {
@@ -56,11 +59,21 @@ class Product extends Component {
         colorchartdata: createColorChartData(response.analysis.color_counts),
         branddata: createBrandData(response.analysis.brand_counts),
         pricedata: response.analysis.price_array,
-        priceanalysis: computeBoxplotStats(response.analysis.price_array)
+        priceanalysis: computeBoxplotStats(response.analysis.price_array),
+        brandavgs: response.analysis.brand_averages
       });
     }
     fetch('http://localhost:3001/?category='+category, {mode: 'cors'})
       .then(response => response.json().then(processResponseJSON.bind(this)));
+  }
+  createBrandAveragesTableData() {
+    return Object.keys(this.state.brandavgs).map((brand, _index, _arr) => {
+      return {
+        'brand': brand,
+        'avg': this.state.brandavgs[brand].avg,
+        'quantity': this.state.brandavgs[brand].quantity
+      }
+    }).sort((a, b) => (a.quantity > b.quantity) ? -1 : 1);
   }
   componentDidMount() {
     this.dbLoad('apron');
@@ -77,6 +90,7 @@ class Product extends Component {
             <Tab>Colors</Tab>
             <Tab>Brands</Tab>
             <Tab>Price distribution</Tab>
+            <Tab>Price avg by brand</Tab>
           </TabList>
           <TabPanel>
             <div className="PieChart">
@@ -130,6 +144,14 @@ class Product extends Component {
             <h4>Median: {priceFormat(this.state.priceanalysis.quartile2)}</h4>
             <h4>Third quartile: {priceFormat(this.state.priceanalysis.quartile3)}</h4>
             <h4>Maximum, excluding outliers: {priceFormat(this.state.priceanalysis.whiskerHigh)}</h4>
+          </TabPanel>
+          <TabPanel>
+            <ReactTable
+              data={this.createBrandAveragesTableData()}
+              columns={[{Header: 'Brand', accessor: 'brand'},
+                        {Header: 'Average price', id: 'avg', accessor: price => priceFormat(price.avg)},
+                        {Header: 'Size of dataset', accessor: 'quantity'}]}
+            />
           </TabPanel>
         </Tabs>
       </div>

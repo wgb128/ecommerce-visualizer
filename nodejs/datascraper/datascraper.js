@@ -48,13 +48,12 @@ function addToMongo(analysis) {
             if(err) return reject(err);
             else {
                 console.log("Connected to mongo");
-                var time_tag = Date.now().toString();
-                console.log("Creating collection", time_tag);
-                db.collection(time_tag).insertMany(documents, function(err, result) {
+                var collection_name = 'commerce';
+                console.log("Creating collection", collection_name);
+                db.collection(collection_name).insertMany(documents, function(err, result) {
                     if(err) return reject(err);
                     else {
                         console.log("Added map");
-                        console.log(JSON.stringify(documents));
                         db.close();
                         return resolve(true);
                     }
@@ -93,11 +92,15 @@ function process(items) {
         if(typeof brand == 'undefined') return 'other';
         else return brand.split('.').join('');
     }
+    function cleanPrice(price_obj) {
+        if(typeof price_obj == 'undefined') return NaN;
+        else return parseFloat(price_obj.Amount) / 100;
+    }
     function cleanItem(val, _index, _arr) {
         var item = {};
         item.Title = val.ItemAttributes.Title;
         item.Color = getBestColorMatch(val.ItemAttributes.Color);
-        item.Price = parseFloat(val.OfferSummary.LowestNewPrice.Amount) / 100;
+        item.Price = cleanPrice(val.OfferSummary.LowestNewPrice);
         item.SalesRank = val.SalesRank;
         item.Brand = cleanBrandName(val.ItemAttributes.Brand);
         return item;
@@ -151,26 +154,52 @@ function analysis(data) {
         return analysis;
     }
     function getPriceArray(analysis, category, _index, _arr) {
+        if(typeof analysis[category] == 'undefined') analysis[category] = {};
         analysis[category]['price_array'] = data[category].map((item, _index, _arr) => item.Price);
+        return analysis;
+    }
+    function getAvgBrandPrice(analysis, category, index, _arr) {
+        function calculateAvgBrandPrice(brand_averages, item, _index, _arr) {
+            var brand = item.Brand;
+            if(typeof brand_averages[brand] != 'undefined') {
+                var curr_avg = brand_averages[brand].avg;
+                var curr_quantity = brand_averages[brand].quantity;
+                var new_avg = (curr_avg * curr_quantity + item.Price) / (curr_quantity + 1);
+                var new_quantity = curr_quantity + 1;
+                brand_averages[brand] = {
+                    avg: new_avg,
+                    quantity: new_quantity
+                }
+            } else {
+                brand_averages[brand] = {
+                    avg: item.Price,
+                    quantity: 1
+                }
+            }
+            return brand_averages;
+        }
+        if(typeof analysis[category] == 'undefined') analysis[category] = {};
+        analysis[category]['brand_averages'] = data[category].reduce(calculateAvgBrandPrice, {});
         return analysis;
     }
     var color_counted = Object.keys(data).reduce(getColorCounts, {});
     var brand_counted = Object.keys(data).reduce(getBrandCounts, color_counted);
     var price_tabulated = Object.keys(data).reduce(getPriceArray, brand_counted);
-    return price_tabulated;
+    var brandavg_tabulated = Object.keys(data).reduce(getAvgBrandPrice, price_tabulated);
+    return brandavg_tabulated;
 }
 
 async function run() {
     var client = initProdAdvClient();
     var keywords = [
-        'apron', 'bandanna'];/*, 'bathing suit', 'belt', 'bikini', 'boot',
+        'apron', 'bandanna', 'bathing suit', 'belt', 'bikini', 'boot',
         'bow tie', 'bra', 'bracelet', 'cardigan', 'coat', 'dress', 'earmuffs',
         'earrings', 'fedora', 'flip-flops', 'glasses', 'gloves', 'handbag',
         'hat', 'helmet', 'high heels', 'jacket', 'jeans', 'kimono', 'mittens',
         'necklace', 'overalls', 'pajamas', 'parka', 'pea coat', 'raincoat',
         'sandals', 'scarf', 'shirt', 'shoe', 'shorts', 'skirt', 'sneakers',
         'sock', 'sunglasses', 'sweater', 't-shirt', 'tie', 'tights',
-        'turtleneck', 'tuxedo', 'vest', 'wig', 'windbreaker'];*/
+        'turtleneck', 'tuxedo', 'vest', 'wig', 'windbreaker'];
     try {
         var data = await scrape(client, keywords);
         await addToMongo(analysis(data));

@@ -9,6 +9,7 @@
     "react-dom": "^15.5.4",
     "react-select": "^1.0.0-rc.5",
     "react-svg-piechart": "^1.2.3",
+    "react-table": "^6.2.0",
     "react-tabs": "^1.0.0",
     "url": "^0.11.0"
   },
