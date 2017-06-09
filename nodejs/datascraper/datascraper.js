@@ -2,10 +2,12 @@ var aws = require('aws-lib');
 var MongoClient = require('mongodb').MongoClient;
 var stringSimilarity = require('string-similarity');
 var csscolors = require('css-color-names');
+var fs = require('fs');
 
 function initProdAdvClient() {
-    var accessKeyId = 'AKIAIVX4TGWKMU46IUFA';
-    var secretAccessKey = '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';
+    var keyObj = JSON.parse(fs.readFileSync('key.json', 'utf8'));
+    var accessKeyId = keyObj.id;
+    var secretAccessKey = keyObj.key;
     var associateTag = 'ednolanstore-20';
     return aws.createProdAdvClient(accessKeyId, secretAccessKey, associateTag);
 }
@@ -67,7 +69,7 @@ async function fullKeywordSearch(client, keyword, response_groups) {
         return new Promise(resolve => setTimeout(resolve, ms));
     }
     var items = [];
-    for(var page = 1; page < 3; page++) {
+    for(var page = 1; page < 11; page++) {
         console.log("Scraping results page", page, "for keyword", keyword);
         try {
             var result = await keywordSearch(client, keyword, response_groups, page);
@@ -82,17 +84,22 @@ async function fullKeywordSearch(client, keyword, response_groups) {
 
 function process(items) {
     function getBestColorMatch(color) {
+        if(typeof color == 'undefined') return 'other';
         var matches = stringSimilarity.findBestMatch(color, Object.keys(csscolors));
         if(matches.bestMatch.rating < 0.8) return 'other';
-        else return matches.bestMatch.target;
+        else return matches.bestMatch.target.split('.').join('');
+    }
+    function cleanBrandName(brand) {
+        if(typeof brand == 'undefined') return 'other';
+        else return brand.split('.').join('');
     }
     function cleanItem(val, _index, _arr) {
         var item = {};
         item.Title = val.ItemAttributes.Title;
         item.Color = getBestColorMatch(val.ItemAttributes.Color);
-        item.Price = val.OfferSummary.LowestNewPrice.Amount;
+        item.Price = parseFloat(val.OfferSummary.LowestNewPrice.Amount) / 100;
         item.SalesRank = val.SalesRank;
-        item.Brand = val.ItemAttributes.Brand;
+        item.Brand = cleanBrandName(val.ItemAttributes.Brand);
         return item;
     }
     return items.map(cleanItem);
@@ -143,9 +150,14 @@ function analysis(data) {
         Object.keys(analysis[category]['brand_counts']).forEach(consolidateInfrequentBrands);
         return analysis;
     }
+    function getPriceArray(analysis, category, _index, _arr) {
+        analysis[category]['price_array'] = data[category].map((item, _index, _arr) => item.Price);
+        return analysis;
+    }
     var color_counted = Object.keys(data).reduce(getColorCounts, {});
     var brand_counted = Object.keys(data).reduce(getBrandCounts, color_counted);
-    return brand_counted;
+    var price_tabulated = Object.keys(data).reduce(getPriceArray, brand_counted);
+    return price_tabulated;
 }
 
 async function run() {

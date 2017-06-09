@@ -5,6 +5,7 @@
   "dependencies": {
     "mongodb": "^2.2.28",
     "react": "^15.5.4",
+    "react-boxplot": "^0.3.1",
     "react-dom": "^15.5.4",
     "react-select": "^1.0.0-rc.5",
     "react-svg-piechart": "^1.2.3",

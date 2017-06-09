@@ -16,3 +16,16 @@ Data analyzed and displayed:
 -Price distribution
 -Brand distribution
 -Average price by brand
+
+How to install:
+Install mongodb and run npm install in nodejs/datascraper, react/data-srv, and react/data-vis
+
+How to scrape data:
+Start up mongod with the dbpath parameter being mongodb/data
+Add your AWS credentials to nodejs/datascraper/key.json
+Start the data scraper in nodejs/datascraper by running npm start
+
+How to view data:
+Start up mongod with the dbpath parameter being mongodb/data
+Start the mongo api server in react/data-srv by running npm start
+Start the react web server in react/data-vis by running npm start

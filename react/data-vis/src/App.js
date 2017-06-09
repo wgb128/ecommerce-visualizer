@@ -8,15 +8,27 @@ import PieChart from 'react-svg-piechart';
 import 'react-select/dist/react-select.css';
 var Select = require('react-select');
 
+var Boxplot = require('react-boxplot'),
+    computeBoxplotStats = require('react-boxplot/dist/stats');
+
+
 class Product extends Component {
   constructor() {
     super();
     this.state = {
       colorchartdata: [],
-      branddata: []
+      branddata: [],
+      pricedata: [],
+      priceanalysis: {
+        whiskerLow: 0,
+        quartile1: 0,
+        quartile2: 0,
+        quartile3: 0,
+        whiskerHigh: 0
+      }
     };
   }
-  dbLoad = () => {
+  dbLoad = (category) => {
     var chart_color_list = ['#3366CC','#DC3912','#FF9900','#109618','#990099',
                             '#3B3EAC','#0099C6','#DD4477','#66AA00','#B82E2E',
                             '#316395','#994499','#22AA99','#AAAA11','#6633CC',
@@ -39,24 +51,32 @@ class Product extends Component {
         }
       }).sort((a, b) => (a.value > b.value) ? -1 : 1);
     }
-    var category = this.props.value;
     function processResponseJSON(response) {
       this.setState({
         colorchartdata: createColorChartData(response.analysis.color_counts),
-        branddata: createBrandData(response.analysis.brand_counts)
+        branddata: createBrandData(response.analysis.brand_counts),
+        pricedata: response.analysis.price_array,
+        priceanalysis: computeBoxplotStats(response.analysis.price_array)
       });
     }
     fetch('http://localhost:3001/?category='+category, {mode: 'cors'})
       .then(response => response.json().then(processResponseJSON.bind(this)));
   }
+  componentDidMount() {
+    this.dbLoad('apron');
+  }
   render() {
+    function priceFormat(num) {
+      return '$' + num.toFixed(2).toString();
+    }
     return (
       <div className="Product">
-        <button className="product" onClick={this.dbLoad}>Load</button>
+        <h2>{this.state.current_keyword}</h2>
         <Tabs>
           <TabList>
             <Tab>Colors</Tab>
             <Tab>Brands</Tab>
+            <Tab>Price distribution</Tab>
           </TabList>
           <TabPanel>
             <div className="PieChart">
@@ -96,6 +116,21 @@ class Product extends Component {
               </div>
             </div>
           </TabPanel>
+          <TabPanel>
+            <Boxplot
+              width={400}
+              height={50}
+              orientation="horizontal"
+              min={0}
+              max={Math.max.apply(Math, this.state.pricedata)}
+              stats={this.state.priceanalysis}
+            />
+            <h4>Minimum, excluding outliers: {priceFormat(this.state.priceanalysis.whiskerLow)}</h4>
+            <h4>First quartile: {priceFormat(this.state.priceanalysis.quartile1)}</h4>
+            <h4>Median: {priceFormat(this.state.priceanalysis.quartile2)}</h4>
+            <h4>Third quartile: {priceFormat(this.state.priceanalysis.quartile3)}</h4>
+            <h4>Maximum, excluding outliers: {priceFormat(this.state.priceanalysis.whiskerHigh)}</h4>
+          </TabPanel>
         </Tabs>
       </div>
     )
@@ -121,17 +156,23 @@ class App extends Component {
   }
   onDropdownChange = (val) => {
     this.setState({current_keyword: val.value});
+    this.refs.product.dbLoad(val.value);
   }
   render() {
     return (
       <div className="App">
-        <Select
-          name='category-dropdown'
-          value={this.state.current_keyword}
-          options={this.dropdown_options}
-          onChange={this.onDropdownChange}
-        />
-        <Product value={this.state.current_keyword}/>
+        <h1>E-Commerce Data Viewer</h1>
+        <div className="dropdown-container">
+          Select a type of clothing:
+          <Select
+            name='category-dropdown'
+            value={this.state.current_keyword}
+            options={this.dropdown_options}
+            onChange={this.onDropdownChange}
+            clearable={false}
+          />
+        </div>
+        <Product ref="product" value={this.state.current_keyword}/>
       </div>
     );
   }

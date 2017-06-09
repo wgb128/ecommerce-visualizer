@@ -4,7 +4,7 @@
   "description": "",
   "main": "datascraper.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --harmony_async_await datascraper.js"
   },
   "author": "",
   "license": "ISC",
